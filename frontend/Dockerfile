@@ -1,5 +1,8 @@
 FROM nginx:1.30.5-alpine
 
+# Pull Alpine security fixes that landed after the upstream image was built.
+RUN apk upgrade --no-cache
+
 # Replace default config with one that proxies /api/* to the backend service
 # and adds basic security headers. Static files served from /usr/share/nginx/html.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
