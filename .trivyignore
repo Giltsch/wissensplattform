@@ -1,0 +1,13 @@
+# Image CVEs accepted in the `image-scan` CI job (same rules as
+# backend/.pip-audit-ignore: reason + re-evaluation date per entry).
+
+# ---- pip 26.2.1 vendored libraries (pip/_vendor) ----
+# Trivy reports the copies pip bundles for itself, not packages the app
+# installs or imports. Even the latest pip ships these versions. pip stays
+# in the image because the documented ops flow runs
+# `docker compose exec backend pip install ...` for in-container tests.
+# Re-evaluate: next pip release (2027-01 at the latest).
+GHSA-6v7p-g79w-8964  # msgpack 1.1.2, out-of-bounds read on Unpacker reuse
+CVE-2025-47273       # setuptools 70.3.0 (pkg_resources), PackageIndex path traversal
+CVE-2026-97687       # urllib3 2.7.0, HTTPS proxy TLS override
+CVE-2026-97689       # urllib3 2.7.0, chunk parser memory DoS
