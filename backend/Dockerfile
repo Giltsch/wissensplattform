@@ -1,5 +1,5 @@
 # Pin the base image by minor version. Slim cuts ~700MB of build tools we don't need.
-FROM python:3.11.11-slim AS base
+FROM python:3.11.17-slim-bookworm AS base
 
 # Why these flags:
 #   PYTHONDONTWRITEBYTECODE: don't write .pyc files (read-only fs friendly).
@@ -30,7 +30,7 @@ WORKDIR /app
 # 2026-05-12). Before the lockfile migration, the file has no hashes
 # and the flag becomes a no-op via the `grep -q` gate below.
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip==24.3.1 \
+RUN pip install --upgrade pip==26.2.1 setuptools==84.0.0 \
  && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 \
  && if grep -q -- '--hash=' /app/requirements.txt; then \
         pip install --require-hashes -r /app/requirements.txt; \

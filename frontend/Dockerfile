@@ -1,4 +1,4 @@
-FROM nginx:1.27.3-alpine
+FROM nginx:1.30.5-alpine
 
 # Replace default config with one that proxies /api/* to the backend service
 # and adds basic security headers. Static files served from /usr/share/nginx/html.

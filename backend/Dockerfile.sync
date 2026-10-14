@@ -8,7 +8,7 @@
 #
 # Build context is ./backend (same as the backend service) so the pinned
 # requirements.txt + the application source are available.
-FROM python:3.11.11-slim AS base
+FROM python:3.11.17-slim-bookworm AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -28,7 +28,7 @@ WORKDIR /app
 # Base runtime deps (CPU torch + the pinned backend requirements), identical
 # to the backend image so the embedder behaves the same.
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip==24.3.1 \
+RUN pip install --upgrade pip==26.2.1 setuptools==84.0.0 \
  && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 \
  && pip install -r /app/requirements.txt
 
