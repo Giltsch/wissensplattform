@@ -188,9 +188,15 @@ async def _rerank(query: str, candidates: list[dict]) -> list[tuple[dict, float]
     pairs = [(query, c["content"]) for c in candidates]
 
     def _predict() -> list[float]:
+        import torch
+
         model = _get_reranker()
-        # CrossEncoder.predict returns raw logits by default.
-        logits = model.predict(pairs, show_progress_bar=False)
+        # Since sentence-transformers 4, predict() applies Sigmoid by default
+        # for single-label rerankers. Ask for raw logits explicitly so the
+        # _sigmoid below runs exactly once.
+        logits = model.predict(
+            pairs, activation_fn=torch.nn.Identity(), show_progress_bar=False
+        )
         return [float(x) for x in logits]
 
     with _tracer.start_as_current_span("rag.rerank") as span:

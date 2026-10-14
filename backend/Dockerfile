@@ -31,7 +31,7 @@ WORKDIR /app
 # and the flag becomes a no-op via the `grep -q` gate below.
 COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip==24.3.1 \
- && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 \
+ && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 \
  && if grep -q -- '--hash=' /app/requirements.txt; then \
         pip install --require-hashes -r /app/requirements.txt; \
     else \

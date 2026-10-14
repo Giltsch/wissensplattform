@@ -10,59 +10,12 @@
 #   - a sentence on why it doesn't apply to our deployment,
 #   - a target release / date for re-evaluation.
 
-# ---- pypdf 5.1.0 — DoS family via crafted PDFs ----
-# Threat model: PDF parsing only happens on (a) admin upload via
-# backend/admin.py:upload_document and (b) the offline ingest CLI. Both are
-# operator-trusted entrypoints. Resource caps in admin.py:_parse_payload
-# (MAX_PDF_PAGES=500, MAX_PDF_TEXT_CHARS=5_000_000) bound the impact of
-# a malicious PDF to ~5 MB of extracted text + 500 pages walked. A bump
-# to pypdf 6.x is a major version with parsing-behaviour changes — needs a
-# regression pass against the existing /docs corpus before shipping.
-# Re-evaluate: 2026-08 (after pypdf 6.x has been out a few months and we
-# can budget the regression test).
-GHSA-7hfw-26vp-jp8m  # DoS in malformed PDF parsing
-GHSA-vr63-x8vc-m265
-GHSA-jfx9-29x2-rv3j  # infinite loop in PDF page extraction
-GHSA-m449-cwjh-6pw7
-GHSA-4xc4-762w-m6cg
-GHSA-4f6g-68pf-7vhv
-GHSA-2q4j-m29v-hq73
-GHSA-9mvc-8737-8j8h
-GHSA-996q-pr4m-cvgq
-GHSA-wgvp-vg3v-2xq3
-GHSA-2rw7-x74f-jg35
-GHSA-x7hp-r3qg-r3cj
-GHSA-f2v5-7jq9-h8cg
-GHSA-9m86-7pmv-2852
-GHSA-hqmh-ppp3-xvm7
-GHSA-qpxp-75px-xjcp
-GHSA-87mj-5ggw-8qc3
-GHSA-3crg-w4f6-42mx
-GHSA-jj6c-8h6c-hppx
-GHSA-4pxv-j86v-mhcw
-GHSA-7gw9-cf7v-778f
-GHSA-x284-j5p8-9c5p
+# 2026-10: pypdf 6.20, cryptography 50, starlette 1.8 (fastapi 0.140),
+# sentence-transformers 5.7 / transformers 5.19 and python-multipart 0.0.32
+# cleared every previously accepted runtime CVE; their entries were removed.
 
 # ---- pytest 8.3.4 ----
 # Test-only dependency. Not in the runtime image's attack surface. Bump to
 # 9.x is a major version with deprecation removals — defer to next batch.
-# Re-evaluate: 2026-08.
+# Re-evaluate: 2027-01.
 GHSA-6w46-j5rx-g56g
-
-# ---- starlette 0.41.3 (transitive via fastapi 0.115.6) ----
-# Bumping requires moving fastapi off 0.115.x; that's a deliberate review
-# (fastapi 0.116+ has minor behaviour changes around Pydantic and
-# dependency resolution). Both CVEs are around multipart parsing limits;
-# our admin upload path already enforces MAX_UPLOAD_BYTES=20MB at the
-# handler level via manual chunked read (admin.py:upload_document), so the
-# starlette default isn't the only line of defence.
-# Re-evaluate: 2026-08 with the planned fastapi bump.
-GHSA-2c2j-9gv5-cj73
-GHSA-7f5h-v6xp-fcq8
-
-# ---- transformers 4.57.6 (transitive via sentence-transformers 3.3.1) ----
-# Fix is in transformers 5.0.0rc3 — a release-candidate, not stable.
-# Won't ship a -rc to prod. The CVE concerns model-loading paths we don't
-# trigger (we only call SentenceTransformer.encode).
-# Re-evaluate: when transformers 5.0.0 stable lands.
-GHSA-69w3-r845-3855

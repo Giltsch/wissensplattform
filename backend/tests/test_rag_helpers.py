@@ -6,6 +6,8 @@ lazy loaders and require torch + a 280 MB model download.
 """
 from __future__ import annotations
 
+import pytest
+
 from rag import (
     UpstreamBusyError,
     _compute_backoff,
@@ -312,3 +314,32 @@ async def test_warmup_swallows_loader_errors(monkeypatch):
 
     # Should return without raising.
     await rag.warmup()
+
+
+async def test_rerank_applies_sigmoid_exactly_once(monkeypatch):
+    """sentence-transformers applies Sigmoid inside predict() for
+    single-label rerankers unless told otherwise. _rerank must request raw
+    logits so the 0.3 threshold sees real probabilities, not sigmoid(sigmoid(x))
+    which is always >= 0.5."""
+    import math
+
+    import torch
+
+    import rag
+
+    class _FakeReranker:
+        def predict(self, pairs, activation_fn=None, **_kwargs):
+            logits = [2.0, -3.0][: len(pairs)]
+            if activation_fn is None:  # library default for num_labels=1
+                activation_fn = torch.nn.Sigmoid()
+            return activation_fn(torch.tensor(logits)).tolist()
+
+    monkeypatch.setattr(rag, "_get_reranker", lambda: _FakeReranker())
+
+    rows = [{"content": "relevant"}, {"content": "irrelevant"}]
+    scored = await rag._rerank("frage", rows)
+
+    scores = [score for _row, score in scored]
+    assert scores[0] == pytest.approx(1 / (1 + math.exp(-2.0)))
+    assert scores[1] == pytest.approx(1 / (1 + math.exp(3.0)))
+    assert scores[1] < 0.3
