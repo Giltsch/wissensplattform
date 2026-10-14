@@ -1,0 +1,46 @@
+# GitHub CODEOWNERS for the Wissensplattform.
+#
+# Lines below assign default reviewers to security-critical paths.
+# A push or PR touching any of these MUST be reviewed by the listed
+# owner(s) — pair this with a branch-protection rule "Require review
+# from code owners" in the repo settings on GitHub UI (audit C4-HIGH-3,
+# 2026-05-12).
+#
+
+# Default owner for anything not matched below.
+*                               @Giltsch
+
+# Authentication, sessions, 2FA — anything here can ruin the auth
+# posture (HMAC, bcrypt, lockout, challenge handling).
+/backend/auth.py                @Giltsch
+/backend/totp.py                @Giltsch
+/backend/rate_limit.py          @Giltsch
+
+# Authorization layer — ACL filter is the only thing standing between
+# tagged docs and the wrong user; changes need a second pair of eyes.
+/backend/acls.py                @Giltsch
+/backend/admin.py               @Giltsch
+
+# Retrieval + prompt assembly — indirect prompt injection lives here.
+/backend/rag.py                 @Giltsch
+/backend/prompts/               @Giltsch
+
+# DB schema. Every migration is irreversible in practice; review hard.
+/backend/migrations/            @Giltsch
+
+# Container / runtime / CI surface. Sensitive to supply chain.
+/Dockerfile                     @Giltsch
+/backend/Dockerfile             @Giltsch
+/frontend/Dockerfile            @Giltsch
+/docker-compose.yml             @Giltsch
+/Caddyfile.example              @Giltsch
+/.github/                       @Giltsch
+
+# Security headers + nginx — CSP, real_ip, rate-limit boundary.
+/frontend/nginx.conf            @Giltsch
+
+# Legal pages — DSGVO/TMG fields must not change without DSB sign-off.
+/frontend/datenschutz.html      @Giltsch
+/frontend/impressum.html        @Giltsch
+/frontend/.well-known/          @Giltsch
+/docs-ops/vvt.md                @Giltsch

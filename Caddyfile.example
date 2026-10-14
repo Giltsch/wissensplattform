@@ -1,0 +1,36 @@
+# Place this on the host (NOT in the docker network) to terminate TLS in front
+# of the published frontend port. Caddy fetches Let's Encrypt certs automatically.
+#
+# Replace `support.example.com` with your domain. Point its A/AAAA records at
+# the VPS first; Caddy needs HTTP-01 reachable on :80 to issue the cert.
+#
+# Run as a separate systemd unit on the host:
+#   apt install caddy
+#   cp Caddyfile.example /etc/caddy/Caddyfile
+#   systemctl reload caddy
+
+support.example.com {
+    encode zstd gzip
+
+    # Strict transport security. 2-year max-age + preload-eligible; only
+    # add the directive once you're certain HTTPS is sticking, otherwise
+    # the browser pin can lock you out (audit C2-LOW-6, 2026-05-12).
+    # After the cert has renewed cleanly for ~30 days, submit the
+    # domain at https://hstspreload.org/ for inclusion in the browser
+    # preload list.
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        # The app sets its own CSP / X-Frame-Options; do not override here.
+        -Server
+    }
+
+    # The compose file publishes the frontend on 8080. Caddy proxies to it.
+    reverse_proxy 127.0.0.1:8080 {
+        # Pass through original client IP for the backend's rate limiter.
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        # Streaming responses (SSE) — disable response buffering.
+        flush_interval -1
+    }
+}

@@ -1,0 +1,8 @@
+# PLACEHOLDER — operator MUST replace bracketed fields before deploying.
+# RFC 9116. Served by nginx at /.well-known/security.txt.
+
+Contact: mailto:[security@example.com]
+Expires: 2027-05-10T00:00:00.000Z
+Preferred-Languages: de, en
+Canonical: https://[wissen.example.com]/.well-known/security.txt
+Policy: https://[wissen.example.com]/security-policy

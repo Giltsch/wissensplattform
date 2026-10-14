@@ -1,0 +1,259 @@
+# Three services on a private network. Only `frontend` publishes a port.
+# Backend and Postgres are reachable only inside the compose network.
+#
+# Runtime hardening (audit C4-HIGH-4 / C4-HIGH-5, 2026-05-12):
+#   - `security_opt: [no-new-privileges:true]` blocks setuid-escalation paths
+#     even if a future image accidentally includes a setuid binary.
+#   - `cap_drop: [ALL]` strips Linux capabilities that defaults grant to
+#     non-root processes; re-add only what each service actually needs.
+#   - `mem_limit` / `cpus` keep one runaway container from OOM-killing the
+#     wrong neighbour (typically Postgres) on a 4 GB VPS.
+services:
+  postgres:
+    # pgvector ships their own image based on the official postgres:16 image.
+    # `pg16` is a *floating* tag — Docker Hub may repoint it to a newer
+    # patch at any pull. To make rebuilds reproducible AND lock the
+    # supply chain against a maintainer-takeover repoint, append a
+    # digest pin (audit C4-MED-9, 2026-05-12):
+    #   docker pull pgvector/pgvector:pg16
+    #   docker inspect --format='{{index .RepoDigests 0}}' pgvector/pgvector:pg16
+    # then update the line to:
+    #   image: pgvector/pgvector:pg16@sha256:<digest>
+    # Renovate (.github/renovate.json `helpers:pinGitHubActionDigests`
+    # doesn't cover Docker; the Docker manager opens a PR per new tag).
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Postgres needs CHOWN+DAC_OVERRIDE+FOWNER+SETGID+SETUID on first init
+    # to create the data directory under its `postgres` user. Without
+    # these the entrypoint fails with "could not chown ...".
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    mem_limit: 1g
+    cpus: 1.0
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No `ports:` — the DB is not reachable from the host.
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Backend runs as uid 10001 and binds to a high port (8000) — no
+    # capabilities required. Filesystem stays writable because torch and
+    # huggingface cache write to /home/app/.cache (covered by the
+    # hfcache volume) and admin uploads write to /app/docs (bind mount).
+    mem_limit: 2g
+    cpus: 3.0
+    env_file: .env
+    environment:
+      # Override the host so the backend talks to the postgres service, not localhost.
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Avoid adding curl to the slim image; use python's stdlib.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status==200 else sys.exit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # No `ports:` — frontend nginx proxies to backend over the internal network.
+    networks:
+      - internal
+    volumes:
+      # Read-write because the admin upload endpoint writes new files here.
+      # The ingest CLI also reads from this path. If you don't enable the
+      # admin UI, append `:ro` for defense-in-depth.
+      - ./docs:/app/docs
+      # Persist sentence-transformers model cache between container restarts.
+      - hfcache:/home/app/.cache/huggingface
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # nginx as a non-root user binds to port 80 inside the container,
+    # which needs NET_BIND_SERVICE (< 1024). The published port is
+    # NAT-routed by Docker, so dropping all other capabilities is fine.
+    cap_add: [NET_BIND_SERVICE, CHOWN, SETGID, SETUID]
+    mem_limit: 256m
+    cpus: 0.5
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # Bind to loopback only — Caddy (running on the host) is the only
+      # process that should reach the frontend. Without this, an attacker
+      # could connect to `<vps_ip>:8080` directly and forge any
+      # `X-Forwarded-For` they like, bypassing the per-IP rate limiter
+      # (audit C2-HIGH-1 / C6-HIGH, 2026-05-12). For dev without Caddy
+      # this still works because dev runs on the same host.
+      - "127.0.0.1:8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # Optional malware scanner for the admin upload path. Off by default —
+  # set CLAMAV_ENABLED=true in .env and uncomment the depends_on below to
+  # turn it on. Costs ~1 GB RAM at idle (signature DB), so keep it off
+  # on smallest VPS plans (KVM 1 / 4 GB).
+  clamav:
+    # Official ClamAV image is amd64-only as of 1.4.x. On Apple Silicon
+    # for local testing add `platform: linux/amd64` (runs via Rosetta).
+    # Linux VPS hosts (Hostinger amd64) need no override.
+    image: clamav/clamav:1.4.3
+    restart: unless-stopped
+    profiles: ["security"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 1500m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "echo PING | nc -w 5 127.0.0.1 3310 | grep -q PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s  # signature DB init takes a minute on first boot
+    volumes:
+      - clamav_db:/var/lib/clamav
+    networks:
+      - internal
+    # No published port — backend reaches it via the internal network.
+
+  # Optional local LLM provider. Off by default (no third-country transfer
+  # when on — the chat never leaves your infra). Mirrors the clamav
+  # `security` profile: opt-in via a named profile, internal network only,
+  # NO published port (the backend reaches it over the private network).
+  #
+  # Turn on by:
+  #   1. Uncommenting EXACTLY ONE of the two `image:` + command blocks below.
+  #   2. In .env: LLM_PROVIDER=vllm (or ollama), LLM_BASE_URL=http://llm:8000
+  #      (vLLM) or http://llm:11434 (Ollama), and OPENROUTER_MODEL=<served name>.
+  #   3. docker compose --profile llm up -d
+  #      (Pull a model first for Ollama: docker compose exec llm ollama pull <name>.)
+  #
+  # The 4 GB-VPS recommendation already assumes ~850 MB for the embedder +
+  # reranker; a local LLM needs substantially more RAM (and ideally a GPU
+  # for vLLM). Size mem_limit/cpus to your host before enabling.
+  llm:
+    profiles: ["llm"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 4g
+    cpus: 2.0
+    networks:
+      - internal
+    # No `ports:` — the backend reaches it via the internal network only.
+    # The healthcheck hits the OpenAI-compatible /v1/models endpoint that
+    # both vLLM and Ollama expose.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/v1/models', timeout=2).status==200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s  # model load can take a while on first boot
+
+    # ---- Alternative A: vLLM (GPU-first, high throughput) ----
+    # Serves an OpenAI-compatible API on :8000. LLM_BASE_URL=http://llm:8000
+    # Needs a CUDA GPU for usable speed; uncomment the `deploy` block for it.
+    # image: vllm/vllm-openai:v0.6.6
+    # command: ["--model", "mistralai/Mistral-7B-Instruct-v0.3", "--port", "8000"]
+    # volumes:
+    #   - hfcache:/root/.cache/huggingface
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+    # ---- Alternative B: Ollama (CPU-friendly, simplest) ----
+    # Serves an OpenAI-compatible API on :11434. LLM_BASE_URL=http://llm:11434
+    # Then change the healthcheck port above from 8000 to 11434.
+    # Pull a model after start: docker compose exec llm ollama pull llama3.1
+    # image: ollama/ollama:0.5.4
+    # volumes:
+    #   - ollama_models:/root/.ollama
+
+  # Optional CRM / external-DB batch sync (Phase 4). OFF by default — not
+  # started unless you select the 'crm' profile AND set CRM_ENABLED=true.
+  # Runs as a SEPARATE one-off container so Presidio's ~1.5 GB of NLP models
+  # never burden the always-on backend. It batches ANONYMIZED CRM records
+  # INTO the documents table; there is NO live query on the chat path.
+  #
+  # Turn on by:
+  #   1. In .env: CRM_ENABLED=true, CRM_CONNECTOR=sql,
+  #      CRM_DSN=<READ-ONLY libpq DSN>, PII_PSEUDONYM_KEY=<openssl rand -hex 32>.
+  #   2. Author a connector spec JSON (query / columns / field_actions /
+  #      group_map) and mount it; point CRM_SPEC_FILE at it (or pass --spec).
+  #   3. docker compose --profile crm run --rm crm-sync --spec /app/crm/spec.json
+  #
+  # No published ports, internal network only, restart: "no" (one-shot).
+  # The DSN MUST point at a SELECT-only role — the SELECT-only query check in
+  # the connector is defense-in-depth, not the primary control.
+  crm-sync:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.sync
+    profiles: ["crm"]
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Presidio + two large spaCy models + the embedder need more headroom
+    # than the chat backend; size to your host.
+    mem_limit: 3g
+    cpus: 2.0
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    volumes:
+      # The embedder reuses the same model cache as the backend.
+      - hfcache:/home/app/.cache/huggingface
+      # Mount the operator-authored connector spec read-only. Adjust the host
+      # path to where you keep it; CRM_SPEC_FILE / --spec points inside here.
+      - ./crm:/app/crm:ro
+    # No published port — reaches postgres over the internal network only.
+
+volumes:
+  pgdata:
+  hfcache:
+  clamav_db:
+  # ollama_models:  # uncomment alongside the Ollama alternative above
+
+networks:
+  internal:
+    driver: bridge

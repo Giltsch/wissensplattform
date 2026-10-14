@@ -1,0 +1,1240 @@
+/* White-label light theme. Neutral defaults: black #000 as primary, blue
+ * #2563EB as the accent. The accent is overridden at runtime from the
+ * configured branding (--accent CSS variable, set by app.js/legal.js); this
+ * value is the fallback before the branding fetch resolves.
+ * Schrift: Inter (OFL, lokal verfügbar auf vielen Systemen); System-Stack
+ * als Fallback. Keine externen Assets — required by the CSP. */
+
+[hidden] { display: none !important; }
+
+:root {
+  --bg:        #ffffff;
+  --panel:     #ffffff;
+  --panel-2:   #f5f5f5;
+  --border:    #e5e5e5;
+  --border-strong: #000000;
+  --fg:        #000000;
+  --muted:     #6b6b6b;
+  --accent:    #2563EB;
+  --accent-fg: #ffffff;
+  --accent-dark: #1d4ed8;
+  --error:     #d92626;
+  --user-bg:   #000000;
+  --user-fg:   #ffffff;
+  --bot-bg:    #f7f7f7;
+  /* Radius scale — soft modernization (was uniformly 2px). Pills still
+     use 999px directly. Inputs/buttons/cards use the small or default
+     radius; modals get the larger one. */
+  --radius:    10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  /* Shadow tokens — small and quiet. Sits under cards and elevates
+     hovered buttons; the lg variant lifts modals visually off the page. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.05);
+  /* Standard motion — long enough to be visible, short enough to feel snappy. */
+  --motion: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable',
+               'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--fg);
+  color: #ffffff;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.01em;
+  /* Subtle lift + shadow on hover. transform: translateY keeps the layout
+     stable (no neighbour reflow); transitions smooth across the whole set. */
+  transition:
+    background var(--motion),
+    color var(--motion),
+    border-color var(--motion),
+    box-shadow var(--motion),
+    transform var(--motion);
+}
+button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+button:disabled { opacity: 0.4; cursor: progress; }
+button.ghost {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--border);
+}
+button.ghost:hover:not(:disabled) {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+input, textarea {
+  font: inherit;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  width: 100%;
+  transition: border-color var(--motion), box-shadow var(--motion);
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(109, 221, 21, 0.25);
+}
+
+.muted { color: var(--muted); }
+.error { color: var(--error); margin: 0.5rem 0 0; min-height: 1.2em; font-size: 0.875rem; }
+
+.view { min-height: 100vh; }
+
+/* ---- Wordmark ---- */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  text-transform: lowercase;
+}
+.wordmark .logo {
+  width: 1.4em;
+  height: 1.6em;
+  flex-shrink: 0;
+}
+.wordmark .accent {
+  font-weight: 700;
+}
+
+/* ---- Login view ---- */
+#view-login {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: var(--bg);
+}
+.card {
+  width: min(420px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.25rem;
+  display: grid;
+  gap: 1rem;
+  /* Soft elevation — distinguishes the card from the page background
+     without a heavy drop-shadow. Inputs/cards/modals share this token. */
+  box-shadow: var(--shadow-sm);
+}
+.card h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.6rem;
+  color: var(--fg);
+  font-weight: 400;
+}
+.card p { margin: 0; }
+.card label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+.card label input { text-transform: none; letter-spacing: normal; font-weight: 400; }
+
+/* ---- Chat view ---- */
+#view-chat {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  height: 100vh;
+}
+.chat-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.25rem;
+  min-height: 0; /* lets the inner panes scroll instead of pushing the page */
+  padding-top: 0.75rem;
+}
+.chat-main {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  gap: 0.75rem;
+  min-height: 0;
+}
+.icon-btn {
+  display: none; /* shown on mobile only */
+  padding: 0.4rem 0.7rem;
+  font-size: 1.05rem;
+}
+
+/* ---- Sidebar (conversation list) ---- */
+.sidebar {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.6rem;
+  border-right: 1px solid var(--border);
+  padding-right: 1rem;
+  min-height: 0;
+  overflow: hidden;
+}
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 90;
+}
+.new-conv-btn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  font-weight: 500;
+  padding: 0.55rem 0.85rem;
+}
+.new-conv-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.conv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 0;
+}
+.conv-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+}
+.conv-item:hover {
+  background: var(--panel-2);
+}
+.conv-item.active {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+.conv-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conv-menu-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  visibility: hidden;
+}
+.conv-item:hover .conv-menu-btn,
+.conv-item.active .conv-menu-btn {
+  visibility: visible;
+}
+.conv-menu-btn:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--bg);
+  border-color: var(--border);
+}
+.conv-popover {
+  position: absolute;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 0.25rem;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 140px;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.conv-popover button {
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+}
+.conv-popover button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--fg);
+  border-color: transparent;
+}
+.conv-popover button.danger { color: var(--error); }
+.conv-popover button.danger:hover:not(:disabled) {
+  background: var(--error);
+  color: #ffffff;
+}
+.conv-empty {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 0.5rem 0.6rem;
+  text-align: center;
+}
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.chat-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--fg);
+  font-weight: 400;
+}
+.header-right { display: flex; gap: 0.6rem; align-items: center; }
+.header-right .muted { font-size: 0.85rem; }
+
+.messages {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.75rem 0.25rem;
+}
+.msg {
+  max-width: min(85%, 70ch);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+/* Once the assistant message is markdown-rendered (paragraphs, lists,
+   etc.) we no longer want pre-wrap — the structured DOM handles
+   whitespace. Streaming live tokens still uses textContent + pre-wrap
+   so partial output doesn't collapse mid-stream. */
+.msg-text.rendered { white-space: normal; }
+.msg-text.rendered p { margin: 0 0 0.55em; }
+.msg-text.rendered p:last-child { margin-bottom: 0; }
+.msg-text.rendered ul {
+  margin: 0.25em 0 0.55em;
+  padding-left: 1.25em;
+}
+.msg-text.rendered ul:last-child { margin-bottom: 0; }
+.msg-text.rendered li { margin: 0.15em 0; }
+.msg-text.rendered code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0 0.3em;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+.msg-text.rendered strong { font-weight: 600; }
+.msg.user {
+  background: var(--user-bg);
+  color: var(--user-fg);
+  align-self: flex-end;
+}
+.msg.bot {
+  background: var(--bot-bg);
+  color: var(--fg);
+  align-self: flex-start;
+  border-left: 3px solid var(--accent);
+}
+.inline-cite {
+  display: inline-block;
+  font-size: 0.78em;
+  /* Match the .source-pill aesthetic in the Quellen row — quiet,
+     belongs to the surrounding text rather than shouting over it.
+     Previously a saturated accent badge (audit polish #2). */
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0 0.5em;
+  border-radius: 999px;
+  margin: 0 0.15em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  vertical-align: baseline;
+  line-height: 1.5;
+}
+
+.msg.bot.thinking::after {
+  content: "▌";
+  margin-left: 2px;
+  color: var(--accent);
+  animation: blink 1s steps(2, end) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.sources {
+  margin-top: 0.55rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.sources .label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+.source-pill {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 2px 0.55rem;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  font: inherit;
+  color: var(--muted);
+}
+.source-pill-link {
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.source-pill-link:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.snippet-head-link {
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+}
+.snippet-head-link:hover {
+  color: var(--fg);
+  border: none;
+}
+.snippet-head-link::after {
+  content: " ↗";
+  font-size: 0.85em;
+}
+
+.snippets {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+}
+.snippets > summary {
+  cursor: pointer;
+  color: var(--muted);
+  user-select: none;
+  list-style: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.snippets > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  width: 1em;
+}
+.snippets[open] > summary::before { content: "▾ "; }
+.snippets > summary:hover { color: var(--fg); }
+.snippet {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+}
+.snippet-head {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.snippet-body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--fg);
+}
+
+/* ---- Feedback (thumbs) ---- */
+.msg-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+}
+.fb-btn {
+  /* Square-ish icon button. Larger hit area than the previous emoji pill. */
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.fb-btn .fb-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  /* Icon strokes follow text colour (currentColor). The active states
+     below set both background and colour. */
+}
+.fb-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.fb-btn:active:not(:disabled) { transform: scale(0.92); }
+/* Up = positive (brand accent green). Down = warning red, but desaturated
+   so a thumbs-down doesn't scream "ERROR" — it's still feedback, not an alarm. */
+.fb-btn.fb-up.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.fb-btn.fb-down.active {
+  background: color-mix(in srgb, #d44 14%, transparent);
+  color: #b33;
+  border-color: color-mix(in srgb, #d44 45%, transparent);
+}
+.fb-btn.fb-up.active .fb-icon { fill: color-mix(in srgb, var(--accent) 22%, transparent); }
+.fb-btn.fb-down.active .fb-icon { fill: color-mix(in srgb, #d44 18%, transparent); }
+.fb-status {
+  color: var(--muted);
+  font-style: italic;
+  margin-left: 0.25rem;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+.composer textarea {
+  resize: vertical;
+  min-height: 2.6rem;
+}
+.composer button { white-space: nowrap; }
+
+/* ---- Admin view ---- */
+#view-admin {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 1rem;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  min-height: 100vh;
+}
+.admin-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.admin-tabs .tab {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.65rem 1rem;
+  margin-bottom: -1px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.admin-tabs .tab:hover {
+  color: var(--fg);
+  background: transparent;
+  border-color: transparent;
+}
+.admin-tabs .tab.active {
+  color: var(--fg);
+  background: transparent;
+  border-bottom-color: var(--accent);
+}
+
+.panel { padding: 0.5rem 0 1.5rem; overflow-y: auto; }
+.panel h2 {
+  font-size: 0.85rem;
+  color: var(--fg);
+  margin: 1.5rem 0 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.panel h2:first-child { margin-top: 0.25rem; }
+
+/* ---- Analytics dashboard ---- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.stat-card {
+  border: 1px solid var(--border);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.stat-card .stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.stat-card .stat-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card .stat-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 80px;
+  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0 0.5rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+.bar {
+  flex: 0 0 14px;
+  background: var(--accent);
+  min-height: 2px;
+  position: relative;
+}
+.bar:hover { background: var(--accent-dark); }
+.bar-label {
+  position: absolute;
+  bottom: -1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--muted);
+  white-space: nowrap;
+  display: none;
+}
+.bar:hover .bar-label { display: block; }
+
+.upload-card { gap: 0.75rem; }
+.upload-card .checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fg);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.95rem;
+}
+.upload-card .checkbox input { width: auto; }
+
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.admin-list .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease;
+}
+.admin-list .row:hover { border-color: var(--border-strong); }
+.admin-list .name { font-weight: 500; }
+.version-badge {
+  display: inline-block;
+  font-size: 0.7em;
+  background: var(--accent);
+  color: var(--accent-fg);
+  padding: 0 0.4em;
+  border-radius: 999px;
+  margin-left: 0.45em;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.admin-list .meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+.tag-chip {
+  display: inline-block;
+  font-size: 0.72rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.05em 0.55em;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.small {
+  font-size: 0.78rem;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+.row-actions button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+button.danger {
+  color: var(--error);
+  background: transparent;
+  border-color: var(--border);
+}
+button.danger:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--error);
+  border-color: var(--error);
+}
+
+/* ---- Legal pages (Impressum, Datenschutz) ---- */
+.legal {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  min-height: 100vh;
+}
+.legal-header {
+  padding: 0.5rem 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+.legal-back {
+  text-decoration: none;
+  color: inherit;
+}
+.legal-body h1 {
+  font-size: 1.75rem;
+  font-weight: 400;
+  margin: 0 0 1rem;
+  letter-spacing: -0.015em;
+}
+.legal-body h2 {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 2rem 0 0.6rem;
+  color: var(--fg);
+}
+.legal-body p {
+  margin: 0 0 1rem;
+  line-height: 1.6;
+}
+.legal-body ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+.legal-body li { margin: 0.35rem 0; }
+.legal-body a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.legal-body a:hover { color: var(--accent-dark); }
+.legal-body code {
+  background: var(--panel-2);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius);
+  font-size: 0.92em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.legal-meta {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+/* ---- Mobile: collapse sidebar to a left drawer ---- */
+@media (max-width: 720px) {
+  #view-chat { padding: 0.75rem 0.85rem; max-width: none; }
+  .chat-shell { grid-template-columns: 1fr; padding-top: 0.5rem; }
+  .icon-btn { display: inline-block; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(85vw, 320px);
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease;
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.08);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop[hidden] { display: none; }
+  .sidebar-backdrop { display: block; }
+  .conv-menu-btn { visibility: visible; } /* no hover on touch */
+  .chat-header { gap: 0.5rem; }
+  .chat-header h1 { font-size: 1rem; }
+}
+
+/* ---- Modal overlays (doc viewer + account modal share this) ---- */
+.doc-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 20, 0.35);
+  /* Backdrop blur softens the page underneath without hiding it.
+     -webkit prefix kept for older Safari; modern browsers honour the
+     unprefixed property. */
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Fade in when the [hidden] attribute is removed via JS. */
+  animation: overlay-fade-in var(--motion);
+}
+.doc-viewer-overlay[hidden] { display: none; }
+.doc-viewer {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: min(820px, 100%);
+  max-height: 85vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+  /* Lift the modal off the page — the lg shadow is for things that float
+     above other UI. */
+  box-shadow: var(--shadow-lg);
+  animation: modal-pop-in var(--motion);
+}
+
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)  scale(1); }
+}
+.doc-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.1rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.doc-viewer-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+.doc-viewer-meta {
+  padding: 0.4rem 1.1rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.doc-viewer-body {
+  overflow-y: auto;
+  padding: 1rem 1.1rem 1.5rem;
+}
+.dv-chunk {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid transparent;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.dv-chunk-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.dv-chunk.highlight {
+  background: rgba(109, 221, 21, 0.12);
+  border-left-color: var(--accent);
+}
+
+/* ---- Account / 2FA modal ---- */
+.account-section-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.5rem;
+}
+.totp-qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0.75rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.totp-secret-line {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+.totp-secret-line code {
+  background: var(--panel-2);
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ---- App footer (legal links) ---- */
+.app-footer {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.app-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.app-footer a:hover { color: var(--fg); }
+
+/* ---- Modal close button (always visible) ---- */
+/* Previously shared the .icon-btn class with the mobile-only sidebar
+   toggle, which is display:none on desktop — so the X was invisible on
+   the very surface where users live (audit polish #4). */
+.modal-close-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.modal-close-btn:hover {
+  color: var(--fg);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* ---- Custom file-input (audit polish #5) ---- */
+/* The native <input type=file> looks like a 1995 OS dialog. Hide it,
+   style the <label> as a proper button, mirror the picked filename
+   into a sibling span via JS. */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+/* Selector deliberately bumps specificity past `.card label` (0,1,1) which
+   would otherwise force uppercase + letter-spacing onto our file picker. */
+label.file-input-btn,
+.card label.file-input-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.7rem 0.45rem 0.55rem;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+  color: var(--fg);
+}
+.file-input-btn:hover { border-color: var(--accent); background: var(--bg); }
+.file-input-cta {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+.file-input-name {
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+}
+
+/* ---- Brand-coloured focus ring (audit polish #6) ---- */
+/* Browser default is a 2px blue outline that breaks the brand. Inputs
+   already have their own green focus halo (see `input:focus` near the
+   top of this file); this rule covers buttons and label-buttons so the
+   whole UI stays on-brand under keyboard navigation. */
+button:focus-visible,
+a:focus-visible,
+.file-input-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Branding: color-picker preview row ---- */
+/* Native <input type=color> renders a tiny swatch button. We show it
+   alongside a live hex readout and a hint so the admin sees their pick
+   take effect across the page before they hit Save. */
+.color-picker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.color-picker-row input[type="color"] {
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.color-hex {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  color: var(--fg);
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.color-preview-hint {
+  font-size: 0.78rem;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+/* ---- Branding: logo picker + section heading ---- */
+.branding-subhead {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+}
+.logo-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.brand-logo-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 4px;
+}
+
+/* ---- Department vocabulary (admin section) ---- */
+.dept-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 1.5rem;
+}
+.dept-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.45rem 0.25rem 0.7rem;
+  font-size: 0.85rem;
+}
+.dept-pill .dept-label { line-height: 1; }
+.dept-pill .dept-slug {
+  color: var(--muted);
+  font-size: 0.78em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.dept-pill button {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dept-pill button:hover {
+  background: var(--error);
+  color: #fff;
+  box-shadow: none;
+  transform: none;
+}
+.dept-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+.dept-create-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+
+/* ---- Chip picker (multi-select for departments) ---- */
+.chip-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 2.4rem;
+  align-items: center;
+}
+.chip-pick {
+  appearance: none;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--motion), border-color var(--motion), color var(--motion);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.chip-pick:hover {
+  border-color: var(--border-strong);
+  box-shadow: none;
+  transform: none;
+}
+.chip-pick.selected {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.chip-pick.selected::before {
+  content: "✓";
+  margin-right: 0.3em;
+  font-weight: 700;
+}
+.chip-picker .chip-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* ---- Tag-edit modal layout ---- */
+.tag-edit-dialog { width: min(560px, 100%); }
+.tag-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

@@ -1,0 +1,19 @@
+# Extra deps for the CRM sync container ONLY (backend/Dockerfile.sync, the
+# 'crm' compose profile). These are NOT installed in the always-on backend
+# image — Presidio + spaCy + two large language models add ~1.5 GB and would
+# bloat the chat backend for no reason (the backend never runs PII detection).
+#
+# Pinned to exact versions like every other dependency file. Bumping is a
+# deliberate review (Presidio's analyzer/anonymizer versions must match, and
+# the spaCy model wheels must match the spaCy runtime).
+#
+# Install on top of requirements.txt inside the sync image:
+#   pip install -r requirements.txt -r requirements-sync.txt
+presidio-analyzer==2.2.355
+presidio-anonymizer==2.2.355
+spacy==3.7.5
+# spaCy language models are distributed as pip-installable wheels from the
+# explicit-pin URLs below (spaCy's own release assets). Pinning the wheel URL
+# locks the model version to the spaCy runtime above.
+https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.7.0/de_core_news_lg-3.7.0-py3-none-any.whl
+https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl

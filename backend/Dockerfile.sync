@@ -1,0 +1,46 @@
+# CRM sync container (Phase 4). Reuses the backend base image and source,
+# then layers Presidio + spaCy + the de/en language models ON TOP — so the
+# always-on backend image stays lean (no Presidio, ~1.5 GB lighter).
+#
+# This image is built and run ONLY via the 'crm' compose profile, which is
+# not started by default. It runs crm_sync.py once (or on an interval if
+# CRM_SYNC_INTERVAL_S > 0) and exits. No ports, internal network only.
+#
+# Build context is ./backend (same as the backend service) so the pinned
+# requirements.txt + the application source are available.
+FROM python:3.11.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HOME=/home/app/.cache/huggingface
+
+# Same non-root user (uid 10001) as the backend image so the hfcache volume
+# ownership lines up if it's shared.
+RUN groupadd --system --gid 10001 app \
+ && useradd  --system --uid 10001 --gid 10001 --home-dir /home/app --create-home app \
+ && mkdir -p /home/app/.cache/huggingface \
+ && chown -R app:app /home/app/.cache
+
+WORKDIR /app
+
+# Base runtime deps (CPU torch + the pinned backend requirements), identical
+# to the backend image so the embedder behaves the same.
+COPY requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip==24.3.1 \
+ && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 \
+ && pip install -r /app/requirements.txt
+
+# CRM-only extras: Presidio + spaCy + de/en models. Separate layer so a
+# requirements.txt change doesn't force a re-download of the ~1.5 GB models.
+COPY requirements-sync.txt /app/requirements-sync.txt
+RUN pip install -r /app/requirements-sync.txt
+
+COPY --chown=app:app . /app
+
+USER app
+
+# One-shot: run the sync and exit (the compose service has restart: "no").
+# A connector spec is required via --spec or CRM_SPEC_FILE.
+ENTRYPOINT ["python", "crm_sync.py"]

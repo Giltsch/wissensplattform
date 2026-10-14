@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <!-- Defense-in-depth alongside robots.txt; some bots ignore robots
+       rules but honour the per-page meta. Login pages should never
+       be indexed (audit C1-INFO-11, 2026-05-12). -->
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Wissensplattform</title>
+  <meta name="theme-color" content="#000000" />
+  <!-- Neutral default logo/favicon; app.js overrides href/src from the
+       configured branding (logo_data_uri) on load. -->
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <noscript>Diese Anwendung benötigt JavaScript.</noscript>
+
+  <!-- Login view -->
+  <section id="view-login" class="view" hidden>
+    <form id="login-form" class="card" autocomplete="on" novalidate>
+      <h1 class="wordmark">
+        <img class="logo" src="/logo.svg" alt="" aria-hidden="true" />
+        <span>Wissensplattform <span class="accent"></span></span>
+      </h1>
+      <p class="muted">Melden Sie sich an, um Fragen zu Firmendokumenten zu stellen.</p>
+      <label>
+        <span>E-Mail</span>
+        <input id="email" name="email" type="email" required autocomplete="username" />
+      </label>
+      <label>
+        <span>Passwort</span>
+        <input id="password" name="password" type="password" required autocomplete="current-password" minlength="1" />
+      </label>
+      <button id="login-btn" type="submit">Anmelden</button>
+      <p id="login-error" class="error" role="alert" hidden></p>
+    </form>
+
+    <!-- Two-factor step. Hidden until /api/login returns 202. -->
+    <form id="totp-form" class="card" autocomplete="off" novalidate hidden>
+      <h1 class="wordmark">
+        <img class="logo" src="/logo.svg" alt="" aria-hidden="true" />
+        <span>Zwei-Faktor</span>
+      </h1>
+      <p class="muted">Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein.</p>
+      <label>
+        <span>Code</span>
+        <input id="totp-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" required autocomplete="one-time-code" />
+      </label>
+      <button id="totp-submit-btn" type="submit">Weiter</button>
+      <button id="totp-cancel-btn" type="button" class="ghost">Abbrechen</button>
+      <p id="totp-error" class="error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- Chat view -->
+  <section id="view-chat" class="view" hidden>
+    <header class="chat-header">
+      <button id="sidebar-toggle" type="button" class="ghost icon-btn" aria-label="Unterhaltungen anzeigen" aria-expanded="false">☰</button>
+      <h1 class="wordmark">
+        <img class="logo" src="/logo.svg" alt="" aria-hidden="true" />
+        <span>Wissensplattform <span class="accent"></span></span>
+      </h1>
+      <div class="header-right">
+        <span id="who" class="muted"></span>
+        <button id="account-btn" type="button" class="ghost">Konto</button>
+        <button id="admin-btn" type="button" class="ghost" hidden>Admin</button>
+        <button id="logout-btn" type="button" class="ghost">Abmelden</button>
+      </div>
+    </header>
+
+    <div class="chat-shell">
+      <aside id="chat-sidebar" class="sidebar" aria-label="Unterhaltungen">
+        <button id="new-conv-btn" type="button" class="new-conv-btn">Neue Unterhaltung</button>
+        <ul id="conv-list" class="conv-list" role="list"></ul>
+      </aside>
+      <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+
+      <div class="chat-main">
+        <div id="messages" class="messages" aria-live="polite" aria-busy="false"></div>
+
+        <form id="chat-form" class="composer">
+          <textarea
+            id="chat-input"
+            rows="2"
+            maxlength="2000"
+            placeholder="Stellen Sie eine Frage. Shift+Enter für eine neue Zeile."
+            required
+          ></textarea>
+          <button id="send-btn" type="submit">Senden</button>
+        </form>
+        <p id="chat-error" class="error" role="alert" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Admin view -->
+  <section id="view-admin" class="view" hidden>
+    <header class="chat-header">
+      <h1 class="wordmark" data-static-sub="verwaltung">
+        <img class="logo" src="/logo.svg" alt="" aria-hidden="true" />
+        <span>Wissensplattform <span class="accent">Verwaltung</span></span>
+      </h1>
+      <div class="header-right">
+        <span id="admin-who" class="muted"></span>
+        <button id="back-to-chat-btn" type="button" class="ghost">Zurück zum Chat</button>
+        <button id="admin-logout-btn" type="button" class="ghost">Abmelden</button>
+      </div>
+    </header>
+
+    <nav class="admin-tabs">
+      <button id="tab-docs" type="button" class="tab active">Dokumente</button>
+      <button id="tab-users" type="button" class="tab">Benutzer</button>
+      <button id="tab-analytics" type="button" class="tab">Analytics</button>
+      <button id="tab-branding" type="button" class="tab">Branding</button>
+    </nav>
+
+    <!-- Documents tab -->
+    <section id="panel-docs" class="panel">
+      <h2>Abteilungen</h2>
+      <div class="card upload-card">
+        <p class="muted">Abteilungen werden auf Dokumente und Benutzer angewendet, um den Zugriff zu steuern. Ein Dokument ohne Abteilung ist öffentlich; ein Benutzer ohne Abteilung sieht nur öffentliche Dokumente. Admins sehen alles.</p>
+        <div id="dept-list" class="dept-grid"></div>
+        <form id="dept-create-form" class="dept-create-row">
+          <input id="dept-create-label" type="text" maxlength="80" placeholder="Anzeigename, z. B. Personal &amp; Recht" required />
+          <input id="dept-create-name" type="text" maxlength="32" placeholder="Slug (a–z, 0–9, -, _)" required />
+          <button id="dept-create-btn" type="submit">Anlegen</button>
+        </form>
+        <p id="dept-error" class="error" role="alert" hidden></p>
+      </div>
+
+      <h2>Dokument hochladen</h2>
+      <form id="upload-form" class="card upload-card">
+        <p class="muted">Erlaubte Dateitypen: PDF, MD, TXT. Max. 20 MB.</p>
+        <label class="file-input-btn" for="upload-file">
+          <span class="file-input-cta">Datei wählen</span>
+          <span id="upload-file-name" class="file-input-name muted">Keine Datei gewählt</span>
+        </label>
+        <input id="upload-file" type="file" accept=".pdf,.md,.markdown,.txt" required class="visually-hidden" />
+        <label>
+          <span>Abteilungen (auswählen — leer = öffentlich)</span>
+          <div id="upload-tag-picker" class="chip-picker"></div>
+        </label>
+        <p class="muted small">Beim Re-Upload werden die vorherigen Abteilungen übernommen, falls keine ausgewählt sind. Ohne Auswahl ist das Dokument für alle authentifizierten Benutzer sichtbar.</p>
+        <button id="upload-btn" type="submit">Hochladen und einlesen</button>
+        <p id="upload-status" class="muted" hidden></p>
+        <p id="upload-error" class="error" role="alert" hidden></p>
+      </form>
+
+      <h2>Vorhandene Dokumente</h2>
+      <ul id="docs-list" class="admin-list"></ul>
+    </section>
+
+    <!-- Users tab -->
+    <section id="panel-users" class="panel" hidden>
+      <h2>Neuen Benutzer anlegen</h2>
+      <form id="create-user-form" class="card upload-card">
+        <label>
+          <span>E-Mail</span>
+          <input id="new-user-email" type="email" required autocomplete="off" />
+        </label>
+        <label>
+          <span>Passwort (mind. 12 Zeichen)</span>
+          <input id="new-user-password" type="password" required minlength="12" autocomplete="new-password" />
+        </label>
+        <label class="checkbox">
+          <input id="new-user-admin" type="checkbox" />
+          <span>Admin-Rechte</span>
+        </label>
+        <label>
+          <span>Abteilungs-Berechtigungen</span>
+          <div id="new-user-tag-picker" class="chip-picker"></div>
+        </label>
+        <p class="muted small">Bestimmt, welche getaggten Dokumente die Person sehen darf. Keine Auswahl = nur öffentliche (ungetaggte) Dokumente. Admins sehen unabhängig davon alles.</p>
+        <button id="create-user-btn" type="submit">Anlegen</button>
+        <p id="create-user-status" class="muted" hidden></p>
+        <p id="create-user-error" class="error" role="alert" hidden></p>
+      </form>
+
+      <h2>Benutzer</h2>
+      <ul id="users-list" class="admin-list"></ul>
+    </section>
+
+    <!-- Analytics tab -->
+    <section id="panel-analytics" class="panel" hidden>
+      <h2>Auf einen Blick</h2>
+      <div id="analytics-totals" class="stat-grid"></div>
+
+      <h2>Letzte Aktivität</h2>
+      <div id="analytics-recent" class="stat-grid"></div>
+
+      <h2>Feedback</h2>
+      <div id="analytics-feedback" class="stat-grid"></div>
+
+      <h2>Antwortqualität (30 Tage)</h2>
+      <div id="analytics-quality" class="stat-grid"></div>
+
+      <h2>Meistzitierte Dokumente (30 Tage)</h2>
+      <ul id="analytics-cited" class="admin-list"></ul>
+
+      <h2>Tägliche Chat-Anfragen (30 Tage)</h2>
+      <div id="analytics-daily" class="bars"></div>
+
+      <h2>Anmeldungen (7 Tage)</h2>
+      <div id="analytics-logins" class="stat-grid"></div>
+    </section>
+
+    <!-- Branding tab -->
+    <section id="panel-branding" class="panel" hidden>
+      <h2>Markenanpassung</h2>
+      <form id="branding-form" class="card upload-card">
+        <p class="muted">
+          Diese Werte ändern Titel, Wortmarke und Akzentfarbe der gesamten
+          Anwendung — auch auf der Login-Seite und in den rechtlichen Seiten.
+        </p>
+        <label>
+          <span>App-Name</span>
+          <input id="brand-app-name" type="text" maxlength="80" required />
+        </label>
+        <label>
+          <span>Sub-Brand (das fett dargestellte Wort, optional)</span>
+          <input id="brand-sub" type="text" maxlength="40" />
+        </label>
+        <label>
+          <span>Akzentfarbe</span>
+          <span class="color-picker-row">
+            <input id="brand-color" type="color" />
+            <span id="brand-color-hex" class="color-hex">—</span>
+            <span class="color-preview-hint muted">Vorschau wird live übernommen</span>
+          </span>
+        </label>
+        <label>
+          <span>Tagline / Untertitel (optional)</span>
+          <input id="brand-tagline" type="text" maxlength="200" />
+        </label>
+
+        <label>
+          <span>Logo (SVG oder PNG, max. 192 KB)</span>
+          <span class="logo-picker-row">
+            <img id="brand-logo-preview" class="brand-logo-preview" alt="" aria-hidden="true" />
+            <label class="file-input-btn" for="brand-logo-file">
+              <span class="file-input-cta">Logo wählen</span>
+              <span id="brand-logo-name" class="file-input-name muted">Aktuelles Logo</span>
+            </label>
+            <button id="brand-logo-clear" type="button" class="ghost">Auf Standard zurücksetzen</button>
+          </span>
+        </label>
+        <input id="brand-logo-file" type="file" accept="image/svg+xml,image/png" class="visually-hidden" />
+
+        <h3 class="branding-subhead">Rechtliche Angaben (Impressum &amp; Datenschutz)</h3>
+        <p class="muted small">
+          Diese Werte erscheinen auf den Seiten Impressum und Datenschutz.
+          Leer lassen, wenn nicht zutreffend — bitte rechtlich prüfen lassen.
+        </p>
+        <label>
+          <span>Firma / Anbietername</span>
+          <input id="brand-legal-name" type="text" maxlength="200" />
+        </label>
+        <label>
+          <span>Anschrift (Straße, PLZ, Ort, Land)</span>
+          <input id="brand-address" type="text" maxlength="400" />
+        </label>
+        <label>
+          <span>Vertreten durch</span>
+          <input id="brand-representative" type="text" maxlength="200" />
+        </label>
+        <label>
+          <span>Kontakt-E-Mail (Impressum)</span>
+          <input id="brand-contact-email" type="email" maxlength="200" />
+        </label>
+        <label>
+          <span>Datenschutz-E-Mail</span>
+          <input id="brand-privacy-email" type="email" maxlength="200" />
+        </label>
+        <label>
+          <span>Registereintrag (z. B. Amtsgericht …, HRB …)</span>
+          <input id="brand-register-info" type="text" maxlength="400" />
+        </label>
+        <label>
+          <span>Umsatzsteuer-ID</span>
+          <input id="brand-vat-id" type="text" maxlength="80" />
+        </label>
+        <label>
+          <span>Zuständige Datenschutzaufsichtsbehörde</span>
+          <input id="brand-supervisory-authority" type="text" maxlength="400" />
+        </label>
+
+        <button id="brand-save-btn" type="submit">Speichern</button>
+        <p id="brand-status" class="muted" hidden></p>
+        <p id="brand-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+  </section>
+
+  <!-- Account / 2FA modal -->
+  <div id="account-modal" class="doc-viewer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <div class="doc-viewer">
+      <header class="doc-viewer-header">
+        <h3 id="account-modal-title" class="doc-viewer-title">Mein Konto</h3>
+        <button id="account-close-btn" type="button" class="modal-close-btn" aria-label="Schließen">×</button>
+      </header>
+      <div class="doc-viewer-body">
+        <h2 class="account-section-title">Zwei-Faktor-Authentifizierung</h2>
+        <p id="totp-status" class="muted"></p>
+
+        <div id="totp-actions"></div>
+
+        <div id="totp-setup" hidden>
+          <p class="muted">
+            Scannen Sie den QR-Code mit einer Authenticator-App
+            (1Password, Aegis, Google Authenticator, …) oder geben Sie
+            das Geheimnis manuell ein. Bestätigen Sie anschließend mit
+            einem aktuell generierten Code.
+          </p>
+          <img id="totp-qr" alt="TOTP QR-Code" class="totp-qr" />
+          <p class="muted totp-secret-line">
+            Geheimnis: <code id="totp-secret"></code>
+          </p>
+          <form id="totp-verify-form" autocomplete="off" novalidate>
+            <label>
+              <span>Aktueller Code</span>
+              <input id="totp-verify-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" required autocomplete="one-time-code" />
+            </label>
+            <button id="totp-verify-btn" type="submit">Aktivieren</button>
+            <p id="totp-verify-error" class="error" role="alert" hidden></p>
+          </form>
+        </div>
+
+        <div id="totp-disable" hidden>
+          <form id="totp-disable-form" autocomplete="off" novalidate>
+            <label>
+              <span>Aktueller Code zum Deaktivieren</span>
+              <input id="totp-disable-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" required autocomplete="one-time-code" />
+            </label>
+            <button id="totp-disable-btn" type="submit" class="ghost danger">Zwei-Faktor entfernen</button>
+            <p id="totp-disable-error" class="error" role="alert" hidden></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doc viewer modal — populated and toggled from JS. Hidden by default. -->
+  <div id="doc-viewer" class="doc-viewer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="doc-viewer-title">
+    <div class="doc-viewer">
+      <header class="doc-viewer-header">
+        <h3 id="doc-viewer-title" class="doc-viewer-title"></h3>
+        <button id="doc-viewer-close" type="button" class="modal-close-btn" aria-label="Schließen">×</button>
+      </header>
+      <div id="doc-viewer-meta" class="doc-viewer-meta muted"></div>
+      <div id="doc-viewer-body" class="doc-viewer-body"></div>
+    </div>
+  </div>
+
+  <!-- Tag-edit modal — used for both "edit doc tags" and "edit user tags" -->
+  <div id="tag-edit-modal" class="doc-viewer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tag-edit-title">
+    <div class="doc-viewer tag-edit-dialog">
+      <header class="doc-viewer-header">
+        <h3 id="tag-edit-title" class="doc-viewer-title">Abteilungen bearbeiten</h3>
+        <button id="tag-edit-close" type="button" class="modal-close-btn" aria-label="Schließen">×</button>
+      </header>
+      <div class="doc-viewer-body">
+        <p id="tag-edit-subject" class="muted small"></p>
+        <div id="tag-edit-picker" class="chip-picker"></div>
+        <div class="tag-edit-actions">
+          <button id="tag-edit-cancel" type="button" class="ghost">Abbrechen</button>
+          <button id="tag-edit-save" type="button">Speichern</button>
+        </div>
+        <p id="tag-edit-error" class="error" role="alert" hidden></p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <a href="/impressum">Impressum</a>
+    <span aria-hidden="true">·</span>
+    <a href="/datenschutz">Datenschutz</a>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

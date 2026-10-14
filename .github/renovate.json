@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "schedule:weekly",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Berlin",
+  "labels": ["dependencies"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 8,
+  "rangeStrategy": "pin",
+  "lockFileMaintenance": { "enabled": false },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "dependencies"],
+    "schedule": ["at any time"]
+  },
+  "packageRules": [
+    {
+      "description": "Group all Python deps so one PR per week instead of N separate ones",
+      "matchManagers": ["pip_requirements"],
+      "groupName": "python deps",
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Pin Docker base image tags strictly — these are versioned with intent",
+      "matchManagers": ["dockerfile"],
+      "rangeStrategy": "bump",
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Major bumps for backend frameworks need manual review (FastAPI, Pydantic, sentence-transformers)",
+      "matchPackagePatterns": ["fastapi", "pydantic", "sentence-transformers", "psycopg", "torch"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "needs-review"],
+      "automerge": false
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{# User-message template for the rewrite step.
+
+   Vars:
+     history_block — pre-rendered "Benutzer: …\nAssistent: …" lines
+     question      — the latest user question
+-#}
+Verlauf:
+{{ history_block }}
+
+Aktuelle Frage: {{ question }}
+
+Eigenständige Frage:

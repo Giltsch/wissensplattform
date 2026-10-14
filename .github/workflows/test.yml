@@ -1,0 +1,223 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Default-deny on the GITHUB_TOKEN scope. Individual jobs can opt in to
+# more, but the default-write that the org may have configured isn't
+# what we want for a token that gets exposed to every third-party
+# action in the run (audit C4-1, 2026-05-12).
+permissions:
+  contents: read
+
+# Cancel in-flight runs on the same ref when a newer commit lands.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: backend unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Actions are pinned by major-version tag here; Renovate is configured
+    # with `helpers:pinGitHubActionDigests` (see .github/renovate.json) and
+    # will open a PR replacing each `@v4` with `@<full-sha>  # v4.2.2` on
+    # its next run, then keep them up to date. Until that PR merges, an
+    # attacker who compromises an actions maintainer can backdoor CI by
+    # repointing the moving tag (audit C4-HIGH-2, 2026-05-12).
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-test.txt
+
+      # Torch from the CPU index — same trick the Dockerfile uses to avoid
+      # pulling ~1.5 GB of CUDA libs we can't run on CI runners anyway.
+      # sentence-transformers picks up the already-installed torch instead
+      # of resolving the GPU build transitively.
+      - name: install deps
+        run: |
+          python -m pip install --upgrade pip==24.3.1
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1
+          pip install -r backend/requirements.txt -r backend/requirements-test.txt
+
+      - name: pytest
+        working-directory: backend
+        run: pytest -v
+        # Fake values for required Settings fields. Tests never connect to
+        # postgres or OpenRouter; conftest.py also sets these defensively
+        # but exporting them here is more honest about CI's environment.
+        env:
+          POSTGRES_DB: ci
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          SESSION_SECRET: ci-session-secret-not-for-production-min-32-chars
+          OPENROUTER_API_KEY: sk-ci-not-real
+
+  cve-scan:
+    # Walks every pinned dep in requirements*.txt against the PyPI
+    # advisory DB. Without this, freshly-pinned deps silently rot as
+    # CVEs land upstream — the audit (2026-05-10) explicitly called out
+    # this gap (audit I-6). Runs in parallel with the unit job; failure
+    # blocks the merge so a known-vulnerable bump can't sneak in.
+    name: dependency CVE scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-test.txt
+      - name: install pip-audit
+        run: pip install pip-audit==2.7.3
+      # Each accepted CVE in .pip-audit-ignore needs a written justification
+      # AND a re-evaluation date — see the file itself. NEW CVEs (anything
+      # not on that list) fail the build, so a fresh upstream advisory
+      # blocks the next merge until it's either fixed or explicitly accepted.
+      - name: load CVE allowlist
+        id: ignores
+        working-directory: backend
+        run: |
+          flags=$(grep -v '^\s*#' .pip-audit-ignore | grep -v '^\s*$' \
+                  | awk '{print "--ignore-vuln " $1}' | tr '\n' ' ')
+          echo "flags=$flags" >> "$GITHUB_OUTPUT"
+      - name: scan runtime deps
+        run: pip-audit --strict ${{ steps.ignores.outputs.flags }} \
+                       --requirement backend/requirements.txt
+      - name: scan test deps
+        run: pip-audit --strict ${{ steps.ignores.outputs.flags }} \
+                       --requirement backend/requirements-test.txt
+
+  sbom:
+    # Software Bill of Materials. Generates CycloneDX JSON for the
+    # pinned runtime deps so "do we have a vulnerable copy of X?" is
+    # answerable in <30 s instead of grepping requirements.txt by
+    # eyeball (audit C4-MED-7, 2026-05-12). Artifact is retained on
+    # the workflow run; ship it to a long-term store when SLSA L3
+    # provenance is needed (a separate operator decision).
+    name: SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: install cyclonedx-bom
+        run: pip install cyclonedx-bom==4.5.0
+      - name: generate SBOM
+        run: |
+          cyclonedx-py requirements -i backend/requirements.txt \
+                       -o sbom-runtime.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-runtime
+          path: sbom-runtime.cdx.json
+          retention-days: 90
+
+  image-scan:
+    # Scans the built backend + frontend container images for known
+    # CVEs in their base layers (Debian / Alpine OS packages). Plain
+    # pip-audit covers only the PyPI packages; OS-level openssl / libc
+    # CVEs slip through that net (audit C4-MED-8, 2026-05-12).
+    # Skipped on PR-from-fork to avoid leaking docker build context.
+    name: container CVE scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - name: build backend image
+        run: docker build -t wp-backend:scan ./backend
+      - name: build frontend image
+        run: docker build -t wp-frontend:scan ./frontend
+      - name: scan backend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'wp-backend:scan'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+      - name: scan frontend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'wp-frontend:scan'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+  legal-placeholders:
+    # DSGVO/TMG Pflichtangaben dürfen nicht als Platzhalter "[Firma]",
+    # "[Anschrift]", "[security@example.com]" ins Production-Image
+    # geraten — sonst sofortiger Verstoß bei Go-Live (audit C6-Critical-1).
+    # Dieser Job fängt unausgefüllte Felder in den Rechtstexten und der
+    # security.txt vor dem Merge ab.
+    # The public template ships with placeholders on purpose; deployment
+    # forks opt in by setting the repo variable ENFORCE_LEGAL_PLACEHOLDERS.
+    name: legal placeholders
+    if: vars.ENFORCE_LEGAL_PLACEHOLDERS == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: check for unfilled placeholders
+        run: |
+          set -e
+          files=(
+            frontend/datenschutz.html
+            frontend/impressum.html
+            frontend/.well-known/security.txt
+          )
+          # Match any `[...]` with at least two non-`]` chars inside. This
+          # catches every placeholder shape we use: `[Firma]`,
+          # `[wissen.example.com]`, `[Operator: ... eintragen]`, etc.
+          # These files don't contain valid bracketed content (no
+          # markdown ref links, no CSS attribute selectors in body),
+          # so any match is a real placeholder.
+          pattern='\[[^]]{2,}\]'
+          fail=0
+          for f in "${files[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error file=$f::expected legal file missing"
+              fail=1
+              continue
+            fi
+            # Skip the leading explanatory comment block in security.txt
+            # (lines starting with "#") — those aren't served content.
+            # For HTML, no skipping: everything is served.
+            if [[ "$f" == *.txt ]]; then
+              if grep -vE '^\s*#' "$f" | grep -nE "$pattern"; then
+                echo "::error file=$f::placeholder(s) found — fill before going live"
+                fail=1
+              fi
+            else
+              if grep -nE "$pattern" "$f"; then
+                echo "::error file=$f::placeholder(s) found — fill before going live"
+                fail=1
+              fi
+            fi
+          done
+          if [[ $fail -ne 0 ]]; then
+            echo
+            echo "Replace the bracketed placeholders with the real legal"
+            echo "details for the deployment. See docs-ops/vvt.md for the"
+            echo "VVT template and frontend/datenschutz.html for each field."
+            exit 1
+          fi
+        continue-on-error: false

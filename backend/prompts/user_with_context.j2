@@ -1,0 +1,31 @@
+{#- User-message template: wraps retrieved chunks in
+    <context-NONCE>...</context-NONCE> followed by the question. The
+    system prompt instructs the model to treat the block as untrusted
+    data; the per-request nonce stops a malicious uploader from
+    closing the block early via a literal `</context>` in their
+    document (audit C5-HIGH-1, 2026-05-12).
+
+    Vars:
+      hits     — list of Hit objects with .source, .chunk_index, .content
+      question — the (possibly rewritten) user question
+      nonce    — random hex string, unique per request
+-#}
+{%- if not hits -%}
+<context-{{ nonce }}>
+(keine Treffer)
+</context-{{ nonce }}>
+{%- else -%}
+<context-{{ nonce }}>
+{% for h in hits -%}
+[source: {{ h.source }} | chunk {{ h.chunk_index }}]
+{{ h.content }}
+{%- if not loop.last %}
+
+---
+
+{% endif %}
+{%- endfor %}
+</context-{{ nonce }}>
+{%- endif %}
+
+Frage: {{ question }}

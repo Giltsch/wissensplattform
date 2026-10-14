@@ -1,0 +1,22 @@
+{
+  "_comment": "Operator-authored CRM connector spec for backend/crm_sync.py. Copy to spec.json and edit. Secrets (DSN, pseudonym key) live in .env, NOT here. The SQL must be a single read-only SELECT against a SELECT-only DB role. REVIEW field_actions carefully: 'keep' emits a column verbatim and MUST only be used for confirmed non-personal fields; PII columns must be 'drop' or 'pseudonymize'.",
+
+  "query": "SELECT customer_id, segment, status, product, contact_email, notes FROM crm.customer_summary",
+
+  "id_column": "customer_id",
+  "group_column": "segment",
+
+  "free_text_columns": ["notes"],
+
+  "field_actions": {
+    "status": "keep",
+    "product": "keep",
+    "contact_email": "drop",
+    "customer_id": "pseudonymize"
+  },
+
+  "group_map": {
+    "Vertrieb": "vertrieb",
+    "Support": "support"
+  }
+}

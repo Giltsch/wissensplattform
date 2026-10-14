@@ -1,0 +1,17 @@
+{
+  "_comment": "Hand-curated gold set for retrieval evaluation. Each entry must have a question and either expected_source (a single filename) or expected_sources (list of acceptable filenames — match if ANY appears in top-5). Add 30-50 entries spanning your real corpus for trustworthy metrics. Copy this file to gold_questions.json and edit there.",
+  "questions": [
+    {
+      "question": "Wie schnell muss ein Tier-1 Ticket beantwortet werden?",
+      "expected_source": "sample-policy.md"
+    },
+    {
+      "question": "Wo finde ich VPN-Zugangsdaten?",
+      "expected_source": "sample-policy.md"
+    },
+    {
+      "question": "Was tun bei einem Phishing-Verdacht?",
+      "expected_source": "sample-policy.md"
+    }
+  ]
+}

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Datenschutz · Wissensplattform</title>
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="legal">
+    <header class="legal-header">
+      <a href="/" class="wordmark legal-back" aria-label="Zurück zur Anwendung">
+        <img class="logo" src="/logo.svg" alt="" aria-hidden="true" />
+        <span>Wissensplattform <span class="accent"></span></span>
+      </a>
+    </header>
+
+    <article class="legal-body">
+      <h1>Datenschutzerklärung</h1>
+
+      <p class="muted">
+        Hinweise gemäß Art. 13 DSGVO. <strong>Diese Vorlage ist auf das
+        technische Verarbeitungsmodell der Plattform abgestimmt; die
+        kontaktierende Stelle, Speicherdauern und ggf. Auftragsverarbeitungs-
+        verträge müssen vom Anbieter rechtlich geprüft und ergänzt werden.</strong>
+      </p>
+
+      <h2>Verantwortlicher</h2>
+      <p>
+        <span data-brand="company_legal_name" data-brand-fallback="[Firma]">[Firma]</span><br />
+        <span data-brand="company_address" data-brand-fallback="[Anschrift]">[Anschrift]</span><br />
+        E-Mail: <a data-brand="privacy_email" data-brand-href="mailto" href="mailto:datenschutz@example.de" rel="noopener">[datenschutz@example.de]</a>
+      </p>
+
+      <h2>Zweck der Verarbeitung</h2>
+      <p>
+        Die Plattform stellt internen Mitarbeitenden Antworten auf Fragen
+        zu unternehmensinternen Dokumenten bereit. Hierfür werden
+        personenbezogene Daten ausschließlich im Rahmen des für den
+        Betrieb erforderlichen Maßes verarbeitet (Art. 6 Abs. 1 lit. b
+        und f DSGVO).
+      </p>
+
+      <h2>Verarbeitete Daten</h2>
+      <ul>
+        <li>
+          <strong>Konto:</strong> E-Mail-Adresse, gespeicherter
+          Passwort-Hash (bcrypt), Rolle (Admin/Benutzer), Aktiv-Status,
+          Erstellungszeitpunkt.
+        </li>
+        <li>
+          <strong>Anmeldungen:</strong> E-Mail-Adresse, IP-Adresse, Zeitpunkt
+          und Erfolg jedes Anmeldeversuchs (Audit-Log) zur Erkennung von
+          Brute-Force-Angriffen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f
+          DSGVO (berechtigtes Interesse an IT-Sicherheit).
+        </li>
+        <li>
+          <strong>Sitzungen:</strong> Hash der Sitzungs-ID,
+          IP über Server-Logs, Erstellungs- und Ablaufzeitpunkt, letzte
+          Aktivität. Sitzungs-Cookies sind technisch erforderlich
+          (Art. 6 Abs. 1 lit. b DSGVO; § 25 Abs. 2 Nr. 2 TTDSG —
+          unbedingt erforderlich für die vom Nutzer angeforderte
+          Funktion). Es werden <em>keine</em> Tracking- oder
+          Marketing-Cookies eingesetzt.
+        </li>
+        <li>
+          <strong>Anfragen-Metadaten:</strong> Benutzer-ID, Länge der Anfrage,
+          Anzahl mitgesendeter Verlauf-Schritte, Zeitpunkt. In den
+          Server-Logs wird ausschließlich diese Metadaten erfasst — Inhalte
+          stehen dort nicht.
+        </li>
+        <li>
+          <strong>Unterhaltungen (Konversationsverlauf):</strong> Wenn Sie
+          eine Frage stellen, werden Ihre Frage und die dazugehörige
+          Antwort des Systems sowie die zugeordneten Quell-Auszüge in
+          einer Datenbanktabelle gespeichert, damit Sie später auf
+          vorherige Unterhaltungen zugreifen können. Die Inhalte
+          einzelner Nachrichten sind ausschließlich Ihrem eigenen Konto
+          sichtbar; Administratoren haben keinen UI-Zugriff auf
+          einzelne Nachrichteninhalte. Für Qualitätssicherung werden
+          jedoch anonymisierte Aggregate berechnet (z.&nbsp;B. Anzahl
+          erfolgreich beantworteter Anfragen, häufig zitierte Dokumente,
+          Bewertungs-Statistik). Sie können einzelne Unterhaltungen
+          jederzeit über die Anwendung löschen (DSGVO-Art.-17-Recht);
+          beim Löschen Ihres Benutzerkontos werden alle zugehörigen
+          Unterhaltungen automatisch entfernt (ON&nbsp;DELETE&nbsp;CASCADE).
+          Unterhaltungen ohne Aktivität können je nach Konfiguration
+          auch automatisch gelöscht werden — siehe Speicherdauer.
+        </li>
+        <li>
+          <strong>Tageskontingent:</strong> pro Benutzer-ID die Anzahl
+          der gestellten Anfragen je Kalendertag. Wird zur Abwehr von
+          Missbrauch ausgewertet.
+        </li>
+        <li>
+          <strong>Administrative Aktionen:</strong> bei Aktionen im
+          Verwaltungsbereich (Dokument-Upload, Benutzer-Verwaltung) wird
+          ein Audit-Eintrag mit Akteur-ID, Aktion, Ziel-ID und IP
+          gespeichert.
+        </li>
+      </ul>
+
+      <h2>Empfänger / Auftragsverarbeitung</h2>
+      <p>
+        Zur Erzeugung von Antworten werden die jeweilige Frage und die
+        passenden Dokument-Auszüge an
+        <a href="https://openrouter.ai" rel="noopener noreferrer">OpenRouter Inc.</a>
+        (KI-Routing-Dienst) übermittelt. OpenRouter leitet die Anfrage an
+        den konfigurierten Sprachmodell-Anbieter weiter. Auftragsverarbeiter
+        nach Art. 28 DSGVO sind:
+      </p>
+      <ul>
+        <li>
+          <strong>OpenRouter Inc.</strong> (USA) — Routing-Schicht.
+          Rechtsgrundlage Drittlandtransfer: EU-Standardvertragsklauseln
+          (Durchführungsbeschluss 2021/914) zwischen Anbieter und
+          OpenRouter. Auftragsverarbeitungsvertrag liegt vor.
+          [Operator: Datum + Vertragsfundstelle eintragen]
+        </li>
+        <li>
+          <strong>Sprachmodell-Anbieter (Sub-Auftragsverarbeiter):</strong>
+          [Operator: <code>OPENROUTER_MODEL</code> auswerten und konkret
+          eintragen — z.&nbsp;B. <em>Anthropic PBC (USA, DPF-zertifiziert)</em>
+          bei <code>anthropic/claude-haiku-4-5</code>, oder
+          <em>Mistral AI SAS (Frankreich, kein Drittlandtransfer)</em> bei
+          <code>mistralai/mistral-medium-3.1</code>].
+        </li>
+      </ul>
+      <p>
+        Bei US-basierten Anbietern erfolgt der Transfer auf Grundlage von
+        Art. 6 Abs. 1 lit. f DSGVO + EU-Standardvertragsklauseln
+        (2021/914) sowie — sofern der Anbieter zertifiziert ist — auf
+        Grundlage des EU-US Data Privacy Framework
+        (Angemessenheitsbeschluss 2023/1795). Bei EU-Anbietern entfällt der
+        Drittlandtransfer.
+      </p>
+      <p>
+        Über die Plattform übermittelte Inhalte werden gemäß den
+        vertraglichen Vereinbarungen mit den genannten Anbietern
+        verarbeitet. Anthropic / OpenAI / Mistral haben sich vertraglich
+        verpflichtet, übermittelte API-Inhalte nicht für Modelltraining zu
+        nutzen. Es wird dennoch empfohlen, besonders sensible
+        personenbezogene Daten nicht in Anfragen einzugeben.
+      </p>
+      <p>
+        Antworten werden automatisiert durch ein Sprachmodell erzeugt und
+        stellen Hinweise dar; eine rechtsverbindliche automatisierte
+        Einzelentscheidung im Sinne von Art. 22 DSGVO erfolgt nicht.
+      </p>
+
+      <h2>Daten aus CRM-/Fremdsystemen (optional)</h2>
+      <p>
+        Sofern der Betreiber die optionale CRM-Anbindung aktiviert hat
+        (Standard: deaktiviert), werden Datensätze aus einem angebundenen
+        CRM-/Fremdsystem <em>ausschließlich lesend</em> (SELECT-only,
+        Read-Only-Zugang) in einem getrennten Stapel-Vorgang verarbeitet.
+        Es findet <strong>keine</strong> Abfrage des Fremdsystems während
+        eines Chats statt und es werden <strong>keine</strong> Daten in das
+        Fremdsystem zurückgeschrieben.
+      </p>
+      <p>
+        Vor jeder Speicherung werden die Datensätze
+        <strong>anonymisiert bzw. pseudonymisiert</strong>: Direkt
+        identifizierende Felder werden gemäß einer pro Feld festgelegten
+        Regel entweder entfernt, durch ein nicht umkehrbares Pseudonym
+        ersetzt oder (nur bei nicht-personenbezogenen Feldern) übernommen.
+        Freitexte durchlaufen zusätzlich eine automatische Erkennung und
+        Schwärzung personenbezogener Entitäten (Namen, E-Mail-Adressen,
+        Telefonnummern, IBAN, Orte, Ausweisnummern). Roh-Identifikatoren
+        gelangen weder in die Suchindizes noch in die Anzeige.
+      </p>
+      <p>
+        <strong>Hinweis zum Sprachmodell:</strong> Auch der anonymisierte
+        CRM-Text kann zur Beantwortung von Fragen an den oben genannten
+        Sprachmodell-Anbieter übermittelt werden — mit demselben
+        Drittlandtransfer wie unter „Empfänger / Auftragsverarbeitung“
+        beschrieben — <em>es sei denn</em>, der Betreiber setzt ein lokal
+        gehostetes Sprachmodell ein (vLLM/Ollama); dann verlässt der Text die
+        eigene Infrastruktur nicht und es entfällt der Drittlandtransfer.
+        Über die CRM-Stapelverarbeitung wird je Lauf ein rein aggregierter
+        Audit-Eintrag (nur Anzahlen, keine Inhalte) gespeichert.
+        [Betreiber: Kategorien betroffener Personen und Rechtsgrundlage des
+        CRM-Imports konkret eintragen; vgl. Verzeichnis der
+        Verarbeitungstätigkeiten.]
+      </p>
+
+      <h2>Speicherdauer</h2>
+      <ul>
+        <li>Konten: für die Dauer des Beschäftigungsverhältnisses bzw.
+          bis zur Deaktivierung oder Selbst-Löschung
+          (<code>DELETE /api/me</code>).</li>
+        <li>Sitzungen: 24 Stunden ab letzter Aktivität; abgelaufene
+          Sitzungen werden alle 6&nbsp;Stunden bereinigt.</li>
+        <li>Login-Versuche: 90 Tage zur Sicherheitsüberwachung
+          (konfigurierbar über <code>RETENTION_LOGIN_ATTEMPTS_DAYS</code>).</li>
+        <li>Tageskontingent-Daten: 30 Tage rollierend
+          (<code>RETENTION_CHAT_USAGE_DAYS</code>).</li>
+        <li>Administrative Audit-Einträge: 1 Jahr; die enthaltene
+          IP-Adresse wird auf das umgebende /24-Subnetz gekürzt
+          gespeichert (Datenminimierung, Art.&nbsp;5 Abs.&nbsp;1 lit.&nbsp;c).</li>
+        <li>Unterhaltungen: Standardmäßig für die Dauer des Kontos
+          ([Operator: ggf. konkrete Tage eintragen, wenn
+          <code>RETENTION_MESSAGES_DAYS</code> &gt; 0 gesetzt ist]).
+          Selbst-Löschung pro Unterhaltung oder Konto jederzeit möglich.</li>
+        <li>Backups: 14 Tage rollierend, verschlüsselt mit
+          <code>age</code> abgelegt.</li>
+      </ul>
+
+      <h2>Ihre Rechte</h2>
+      <p>
+        Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16),
+        Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
+        Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21) gegen die
+        Verarbeitung Ihrer Daten.
+      </p>
+      <p>
+        <strong>Auskunft und Datenexport (Art. 15 und 20):</strong>
+        Eingeloggte Nutzerinnen und Nutzer können jederzeit eine maschinen-
+        lesbare Kopie aller zu ihrem Konto gespeicherten Daten als
+        JSON-Datei abrufen — Endpunkt
+        <code>GET /api/me/export</code>. Der Export enthält Konto-Stammdaten,
+        sämtliche Unterhaltungen mit Nachrichten und Quellen, Bewertungen,
+        Tageskontingent-Einträge und protokollierte Anmeldeversuche.
+      </p>
+      <p>
+        <strong>Löschung des Kontos (Art. 17):</strong> Einzelne Unterhaltungen
+        können in der Anwendung gelöscht werden. Das gesamte Konto inklusive
+        aller verknüpften Daten lässt sich über
+        <code>DELETE /api/me</code> selbst löschen; verknüpfte Daten werden
+        per Datenbank-Cascade entfernt. Konten mit administrativen Audit-
+        Einträgen können sich aus Beweissicherungs-Gründen nicht selbst
+        löschen (HTTP 409) — wenden Sie sich in diesem Fall an die unten
+        genannte Kontaktadresse.
+      </p>
+      <p>
+        Weitere Anfragen richten Sie bitte an die oben genannte
+        Kontaktadresse. Sie haben darüber hinaus das Recht zur Beschwerde
+        bei einer Aufsichtsbehörde — zuständig ist
+        <span data-brand="supervisory_authority" data-brand-fallback="[zuständige Datenschutzaufsichtsbehörde]">[zuständige Datenschutzaufsichtsbehörde]</span>.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        Es wird ein einzelnes, technisch erforderliches Sitzungs-Cookie
+        (<code>rag_session</code> bzw. <code>__Host-rag_session</code>
+        unter HTTPS) gesetzt. Es ist <code>HttpOnly</code>,
+        <code>SameSite=Strict</code> und in produktiver Umgebung
+        <code>Secure</code>. Eine Einwilligung ist hierfür nicht
+        erforderlich — § 25 Abs. 2 Nr. 2 TTDSG: „unbedingt erforderlich
+        für die vom Nutzer angeforderte Funktion". Es werden keine
+        Tracking-, Marketing- oder Analyse-Cookies eingesetzt.
+      </p>
+
+      <p class="muted legal-meta">
+        <a href="/impressum">Impressum</a> ·
+        <a href="/">Zur Anwendung</a>
+      </p>
+    </article>
+  </main>
+  <!-- Fills the white-label identity (data-brand spans) + logo/wordmark
+       from /api/branding. External script — inline is forbidden by CSP. -->
+  <script src="/legal.js" defer></script>
+</body>
+</html>
