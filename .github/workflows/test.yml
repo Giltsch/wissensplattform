@@ -94,11 +94,13 @@ jobs:
                   | awk '{print "--ignore-vuln " $1}' | tr '\n' ' ')
           echo "flags=$flags" >> "$GITHUB_OUTPUT"
       - name: scan runtime deps
-        run: pip-audit --strict ${{ steps.ignores.outputs.flags }} \
-                       --requirement backend/requirements.txt
+        run: |
+          pip-audit --strict ${{ steps.ignores.outputs.flags }} \
+                    --requirement backend/requirements.txt
       - name: scan test deps
-        run: pip-audit --strict ${{ steps.ignores.outputs.flags }} \
-                       --requirement backend/requirements-test.txt
+        run: |
+          pip-audit --strict ${{ steps.ignores.outputs.flags }} \
+                    --requirement backend/requirements-test.txt
 
   sbom:
     # Software Bill of Materials. Generates CycloneDX JSON for the
@@ -121,7 +123,7 @@ jobs:
         run: pip install cyclonedx-bom==4.5.0
       - name: generate SBOM
         run: |
-          cyclonedx-py requirements -i backend/requirements.txt \
+          cyclonedx-py requirements backend/requirements.txt \
                        -o sbom-runtime.cdx.json
       - uses: actions/upload-artifact@v4
         with:
@@ -148,14 +150,14 @@ jobs:
       - name: build frontend image
         run: docker build -t wp-frontend:scan ./frontend
       - name: scan backend
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: 'wp-backend:scan'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
           ignore-unfixed: true
       - name: scan frontend
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: 'wp-frontend:scan'
           severity: 'CRITICAL,HIGH'
